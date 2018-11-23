@@ -1,0 +1,56 @@
+CREATE OR REPLACE FUNCTION CALCULAR_CAJAS_NECESARIAS (num_items in number, cant_cgrande in number, cant_cpeque in number) 
+RETURN string AS
+   no_envio number; 
+   cant_cgrande_nec number;
+   cant_cpeque_nec number;
+   total_cajas number;
+BEGIN
+
+if (cant_cgrande>0) and (num_items >= 5) then
+	cant_cgrande_nec := round(num_items / 5);
+end if;
+
+if (cant_cpeque>0) then
+	cant_cpeque_nec := num_items - (cant_cgrande_nec * 5);
+end if;
+
+if (cant_cgrande_nec > cant_cgrande) or (cant_cpeque_nec > cant_cpeque) then
+	no_envio := -1
+endif;
+
+  if (no_envio != -1) then
+  	total_cajas := cant_cgrande_nec + cant_cpeque_nec;
+  	//message:= 'Items: ' +num_items+ ' Cajas grandes: ' + cant_cgrande_nec + ' Cajas pequeñas: ' + cant_cpeque_nec + 'Total cajas: ' + total_cajas;
+  	message := total_cajas;
+   	return message;
+  end if;
+
+  if (no_envio = 1) then
+  	return no_envio;
+  end if;
+END;
+--------------------------------------------------------
+CREATE OR REPLACE PROCEDURE PROCESAR_PEDIDOS AS
+ cantidad_registros number;
+ cant_prod number;
+ caj_grande number;
+ caj_pequeña number;
+ contador number := 1;
+ cant_cajas number;
+pointer_id number := service_details_sequence.nextval;
+BEGIN
+	
+    cantidad_registros := select count (items) FROM PEDIDOS;
+
+    WHILE contador<=cantidad_registros
+	LOOP  
+		SELECT items INTO cant_prod FROM vehicles where rownum := contador;
+    	SELECT cajas_grandes INTO caj_grande FROM vehicles where rownum := contador;
+    	SELECT cajas_pequeñas INTO caj_pequeña FROM vehicles where rownum := contador;
+    	cant_cajas := CALCULAR_CAJAS_NECESARIAS(cant_prod, caj_grande, caj_pequeña);
+    	update PEDIDOS set cantidad_cajas = cant_cajas where rownum := contador;
+	END LOOP;
+END;
+---------------------------------------------------------------------------
+select PRACTICA(100) from dual;
+drop function CALCULAR_CAJAS_NECESARIAS;
